@@ -1,6 +1,9 @@
 package com.epam.izh.rd.online.service;
 
 import com.epam.izh.rd.online.entity.User;
+import com.epam.izh.rd.online.exception.NotAccessException;
+import com.epam.izh.rd.online.exception.SimplePasswordException;
+import com.epam.izh.rd.online.exception.UserAlreadyRegisteredException;
 import com.epam.izh.rd.online.repository.IUserRepository;
 import com.epam.izh.rd.online.repository.UserRepository;
 
@@ -13,7 +16,7 @@ public class UserService implements IUserService {
     }
 
     /**
-     * Необходимо доработать данный метод следующим функционлом:
+     * Необходимо доработать данный метод следующим функционалом:
      * <p>
      * 1) Необходимо проверять наличие заполнения всех полей сущности User. Если же поле с логином или паролем не
      * заполнено или заполнено пустой строкой. Необходимо выбрасывать существующее непроверяемое исключение
@@ -27,16 +30,20 @@ public class UserService implements IUserService {
      * В случае, если это происходит (например пароль = "123432") необходимо выбрасывать
      * исключение с названием SimplePasswordException и текстом - "Пароль не соответствует требованиям безопасности"
      *
-     * @param user - даныне регистрирующегося пользователя
+     * @param user - данные регистрирующегося пользователя
      */
     @Override
-    public User register(User user) {
-
-        //
-        // Здесь необходимо реализовать перечисленные выше проверки
-        //
-
-        // Если все проверки успешно пройдены, сохраняем пользователя в базу
+    public User register(User user) throws UserAlreadyRegisteredException, SimplePasswordException {
+        if (user.getLogin() == null || user.getLogin().equals("") ||
+                user.getPassword() == null || user.getPassword().equals("")) {
+            throw new IllegalArgumentException();
+        }
+        if (userRepository.findByLogin(user.getLogin()) != null) {
+            throw new UserAlreadyRegisteredException("Пользователь с логином '" + user.getLogin() + "' уже зарегистрирован");
+        }
+        if (user.getPassword().matches("\\d+")) {
+            throw new SimplePasswordException("Пароль не соответствует требованиям безопасности");
+        }
         return userRepository.save(user);
     }
 
@@ -58,14 +65,12 @@ public class UserService implements IUserService {
      *
      * @param login
      */
-    public void delete(String login) {
-
-        // Здесь необходимо сделать доработку метод
-
+    public void delete(String login) throws NotAccessException {
+        try {
             userRepository.deleteByLogin(login);
-
-        // Здесь необходимо сделать доработку метода
-
+        } catch (UnsupportedOperationException e) {
+            throw new NotAccessException("Недостаточно прав для выполнения операции");
+        }
     }
 
 }
